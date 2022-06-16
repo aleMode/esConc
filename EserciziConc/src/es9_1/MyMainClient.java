@@ -19,9 +19,7 @@ public class MyMainClient {
 			System.out.println("MCD("+x+","+y+")="+stub.mcd(x,y));
 			x=18765; y=345435;
 			System.out.println("MCD("+x+","+y+")="+stub.mcd(x,y));
-		}catch (Exception e) { System.err.println("Errore:" + e); }
-		
-		
+		}catch (Exception e) { System.err.println("Errore:" + e); }		
 	}
 
 }
