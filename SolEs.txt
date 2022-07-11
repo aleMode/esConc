@@ -1,0 +1,67 @@
+ES Local -> Multi con socket
+1. Le classi che devono comunicare tra client e server sono messe serializable
+2. La classe comune per il controllo ha metodi synchronized 
+3. Il server:
+	a. Crea un serversocket con la porta
+	b. Crea un elemento per il controllo degli altri (tipo la banca)
+	c. Crea un socket all'infinito per ogni connessione 
+	d. Crea un thread passandogli l'elemento comune e il socket
+	e. Finally si chiude
+4. Il serverThread 
+	a. Memorizza alla creazione il socket e l'elemento comune, creando in e out come ObjInput e ObjOutput streams e starta
+	b. All'infinito prova a leggere una richiesta e se è end esce (il readobj viene castato con il tipo necessario per creare l'oggetto inviato)
+	c. Esegue la richiesta 
+	d. Scrive la risposta
+	e. Finally prova a chiudere il socket
+5. Il Multiclient
+	a. Crea un inetaddress con nome nullo
+	b. Con un while crea n threads e gli passa l'indirizzo, dormendo se si è già al numero massimo
+	c. Ha un main che fa partire questa funzione (o questo è il main)
+6. Il clientThread
+	a. Salva l'id del client
+	b. Crea un nuovo socket con address e porta default
+	c. Crea nuovi in e out e starta
+	d. In un loop (prob in un try too) esegue n volte delle operazioni con writeobject e leggendo il risultato, printando localmente l'esito
+	e. Finally close il socket
+7. Se si ha un proxy, esso viene creato con un socket (gli in e out) dal client thread e implementa le chiamate per le operazioni con semplicemente il read e writeobject.
+8. Se c'è necessità dell'attesa di una risposta un client slave verrà creato al posto della lettura della risposta con il socket input del proxy e il risultato; esso sarà letto col readobj e setterà un flag di completamento nel risultato, copiando i valori da esso nel res passato da clientthead al proxy
+
+ES Local -> Multi con RMI
+1. La classe server-side ha deve avere un'interfaccia che estenda Remote e indichi tutti i metodi che vengono chiamati da remoto; ciò vale anche per il client 
+2. La classe server deve 
+	a. estendere UnicastRemoteObject e implementare l'interfaccia
+	b. ridefinire i metodi dell'interfaccia
+	c. (nel main) creare un oggetto del tipo della classe
+	d. Crare un registry (con LocateReg.createReg(porta))
+	e. Rebindare il registro con nome e oggetto
+	f. Se si vuole avere un callback serve una lista dei socket client accettati e un metodo per aggiungerli (chiamato dal client) e un metodo client per invocare il callback (tipo reportnews)
+3. La classe client deve 
+	a. (estendere thread)
+	b. Creare un registro che localizzi il registro con LocateReg.getReg(porta))
+	c. Creare un oggetto a partire dal cast del lookup del registro col nome dato (stub)
+	d. (Implementare eventualmente i metodi dell'interfaccia che il server può chiamare; si passa il riferimento con un oggetto della stessa classe castato da UnicastRemoteObject.exportObject(this, PORT))
+
+Altro/sincronizzazione
+- Ricordati di mettere gli sleep e notify nei metody Synchronized che vengono chiamati dai thread
+- Usare  Thread.sleep(ThreadLocalRandom.current().nextInt(1,2)) per mettere in sleep i thread
+- Il join non va in un synchronized
+- Usare .interrupt() per interrompere un oggetto che runna (va usato su thread) e che rimane in waiting o sleep (con if (Thread.currentThread().interrupted()) )
+- Esempio barbiere:
+	o Il negozio è quello che gestisce tutto, il medium
+	o Ha gli enum per lo statopoltrona e per lo statocoda, con le rispettive variabili di tipo statoCoda e statoPoltrona
+	o Ha metodi per:
+		* guardare se ci siano clienti in attesa 
+		* se un cliente possa entrare 
+		* per l'attesa dormiente
+		* per l'attesa del cliente finchè non sia servito (bloccante easy con while)
+		* per l'attesa fine taglio (finchè lui è il servito)
+		* per annullare il servito a fine taglio e svuotare la poltrona con notifyall
+		* per il primo cliente dopo una sleep
+		* per il servizio del cliente (con notifyall)
+		* per far accomodare il cliente(con notifyall)
+		* per l'esecuzione del taglio con una wait finchè il paziente non si acomoda e poi una Thread.sleep(t)
+- Esempio Reader Writer
+	o Reader è un Thread
+	o Con uno scrittore bisogna usare un writepending che segnala che c'è uno scrittore in attesa (e viene resettato dopo il wait e l'accesso aumentando il numero di scrittori) che impedisca lo startReading se è settato true
+	o Il finishedWriting diminuirà il numero di scrittori e se esso sarà 0 farà una notifyall
+
